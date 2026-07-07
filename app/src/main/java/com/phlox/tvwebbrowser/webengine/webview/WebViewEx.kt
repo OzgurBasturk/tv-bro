@@ -412,6 +412,12 @@ open class WebViewEx(context: Context, val callback: Callback, val jsInterface: 
                 Log.d(TAG, "onPageFinished url: $url")
                 callback.onPageFinished(url)
                 evaluateJavascript(getGenericJSInjects(), null)
+                // Re-apply the current navigation mode to the freshly loaded document,
+                // since the injected JS state does not survive navigation.
+                evaluateJavascript(
+                    "window.__tvbroSetSpatialNavEnabled && window.__tvbroSetSpatialNavEnabled(${!virtualCursorMode});",
+                    null
+                )
             }
 
             override fun onLoadResource(view: WebView, url: String) {
@@ -647,5 +653,11 @@ open class WebViewEx(context: Context, val callback: Callback, val jsInterface: 
 
     fun setVirtualCursorMode(enabled: Boolean) {
         this.virtualCursorMode = enabled
+        // Direct Navigation Mode is the inverse of virtual cursor mode: when the
+        // cursor is off, the injected spatial-navigation engine takes over D-pad input.
+        evaluateJavascript(
+            "window.__tvbroSetSpatialNavEnabled && window.__tvbroSetSpatialNavEnabled(${!enabled});",
+            null
+        )
     }
 }

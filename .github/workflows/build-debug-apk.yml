@@ -1,0 +1,46 @@
+name: Build debug APK (spatial navigation fork)
+
+# Manuel olarak "Actions" sekmesinden tetiklenir, istersen push tetikleyicisini
+# de aktif bırakabilirsin. Keystore / imzalama secret'i gerekmez: bu iş akışı
+# debug (imzasız değil, debug-key ile imzalı, doğrudan kurulabilir) bir APK üretir.
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build WebView-only debug APK
+        # geckoExcluded: sadece Android'in yerleşik WebView motorunu kullanır
+        # (bu fork'taki D-pad spatial-navigation yaması bu motora eklendi).
+        # geckoIncluded varyantını da istersen aşağıdaki satırı
+        # "assembleGenericGeckoIncludedDebug" ile değiştirip ekleyebilirsin.
+        run: ./gradlew assembleGenericGeckoExcludedDebug --stacktrace
+
+      - name: Locate APK
+        id: find_apk
+        run: |
+          APK_PATH=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          echo "APK bulundu: $APK_PATH"
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvbro-spatial-nav-debug-apk
+          path: ${{ steps.find_apk.outputs.apk_path }}
+          if-no-files-found: error
